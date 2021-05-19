@@ -126,16 +126,16 @@ func TestBaseSystemMatrices(t *testing.T) {
 	assert.NotNil(f)
 	assert.NoError(err)
 
-	m := f.StateMatrix()
+	m := f.SystemMatrix()
 	assert.True(mat.EqualApprox(m, A, 0.001))
 
-	m = f.StateCtlMatrix()
+	m = f.ControlMatrix()
 	assert.True(mat.EqualApprox(m, B, 0.001))
 
 	m = f.OutputMatrix()
 	assert.True(mat.EqualApprox(m, C, 0.001))
 
-	m = f.OutputCtlMatrix()
+	m = f.FeedForwardMatrix()
 	assert.True(mat.EqualApprox(m, D, 0.001))
 }
 

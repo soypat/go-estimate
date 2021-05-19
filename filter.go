@@ -53,14 +53,14 @@ type Smoother interface {
 type DiscreteModel interface {
 	// Model is a model of a dynamical system
 	Model
-	// StateMatrix returns state propagation matrix
-	StateMatrix() (A mat.Matrix) // TODO rename to SystemMatrix
-	// StateCtlMatrix returns state propagation control matrix
-	StateCtlMatrix() (B mat.Matrix) // TODO rename to ControlMatrix
+	// SystemMatrix returns state propagation matrix
+	SystemMatrix() (A mat.Matrix) // TODO rename to SystemMatrix
+	// ControlMatrix returns state propagation control matrix
+	ControlMatrix() (B mat.Matrix) // TODO rename to ControlMatrix
 	// OutputMatrix returns observation matrix
 	OutputMatrix() (C mat.Matrix)
-	// OutputCtlMatrix returns observation control matrix
-	OutputCtlMatrix() (D mat.Matrix) // TODO Rename to FeedMatrix/FeedForwardMatrix
+	// FeedForwardMatrix returns observation control matrix
+	FeedForwardMatrix() (D mat.Matrix) // TODO Rename to FeedMatrix/FeedForwardMatrix
 	// TODO DisturbanceMatrix
 }
 

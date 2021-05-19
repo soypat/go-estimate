@@ -60,13 +60,13 @@ func New(m filter.DiscreteModel, init filter.InitCond, z, wn filter.Noise) (*KF,
 		wn, _ = noise.NewNone()
 	}
 
-	rows, cols := m.StateMatrix().Dims()
+	rows, cols := m.SystemMatrix().Dims()
 	if rows != _nx || cols != _nx {
 		return nil, fmt.Errorf("invalid propagation matrix dimensions: [%d x %d]", rows, cols)
 	}
 
-	if m.StateCtlMatrix() != nil && !m.StateCtlMatrix().(*mat.Dense).IsEmpty() {
-		rows, cols := m.StateCtlMatrix().Dims()
+	if m.ControlMatrix() != nil && !m.ControlMatrix().(*mat.Dense).IsEmpty() {
+		rows, cols := m.ControlMatrix().Dims()
 		if rows != _nx {
 			return nil, fmt.Errorf("invalid ctl propagation matrix dimensions: [%d x %d]", rows, cols)
 		}
@@ -77,8 +77,8 @@ func New(m filter.DiscreteModel, init filter.InitCond, z, wn filter.Noise) (*KF,
 		return nil, fmt.Errorf("invalid observation matrix dimensions: [%d x %d]", rows, cols)
 	}
 
-	if m.OutputCtlMatrix() != nil && !m.OutputCtlMatrix().(*mat.Dense).IsEmpty() {
-		rows, cols = m.OutputCtlMatrix().Dims()
+	if m.FeedForwardMatrix() != nil && !m.FeedForwardMatrix().(*mat.Dense).IsEmpty() {
+		rows, cols = m.FeedForwardMatrix().Dims()
 		if rows != _ny {
 			return nil, fmt.Errorf("invalid ctl observation matrix dimensions: [%d x %d]", rows, cols)
 		}
@@ -119,8 +119,8 @@ func (k *KF) Predict(x, u mat.Vector) (filter.Estimate, error) {
 	}
 
 	cov := &mat.Dense{}
-	cov.Mul(k.m.StateMatrix(), k.p)
-	cov.Mul(cov, k.m.StateMatrix().T())
+	cov.Mul(k.m.SystemMatrix(), k.p)
+	cov.Mul(cov, k.m.SystemMatrix().T())
 
 	if _, ok := k.q.(*noise.None); !ok {
 		cov.Add(cov, k.q.Cov())
@@ -242,7 +242,7 @@ func (k *KF) Run(x, u, z mat.Vector) (filter.Estimate, error) {
 	return est, nil
 }
 
-// Model returns KF model
+// Model returns KF models
 func (k *KF) Model() filter.Model {
 	return k.m
 }

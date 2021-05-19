@@ -64,7 +64,7 @@ func NewBaseModel(A, B, C, D, E *mat.Dense) (*BaseModel, error) {
 // Propagate propagates internal state x of a falling ball to the next step
 // given an input vector u and a disturbance input z. (wd is process noise, z not implemented yet)
 func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
-	_nx, _nu, _, _nz := b.Dims()
+	_nx, _nu, _, _ := b.Dims()
 	if u != nil && u.Len() != _nu {
 		return nil, fmt.Errorf("invalid input vector")
 	}
@@ -83,7 +83,7 @@ func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
 		out.Add(out, outU)
 	}
 
-	if wd != nil && wd.Len() == _nz {
+	if wd != nil && wd.Len() == _nx { // TODO change _nx to _nz when switching to z
 		// outZ := new(mat.Dense) // TODO add E disturbance matrix
 		// outZ.Mul(b.E, z)
 		// out.Add(out, outZ)
@@ -137,16 +137,16 @@ func (b *BaseModel) Dims() (nx, nu, ny, nz int) {
 	return nx, nu, ny, nz
 }
 
-// StateMatrix returns state propagation matrix
-func (b *BaseModel) StateMatrix() mat.Matrix {
+// SystemMatrix returns state propagation matrix
+func (b *BaseModel) SystemMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	m.CloneFrom(b.A)
 
 	return m
 }
 
-// StateCtlMatrix returns state propagation control matrix
-func (b *BaseModel) StateCtlMatrix() mat.Matrix {
+// ControlMatrix returns state propagation control matrix
+func (b *BaseModel) ControlMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	if b.B != nil {
 		m.CloneFrom(b.B)
@@ -163,8 +163,8 @@ func (b *BaseModel) OutputMatrix() mat.Matrix {
 	return m
 }
 
-// OutputCtlMatrix returns observation control matrix
-func (b *BaseModel) OutputCtlMatrix() mat.Matrix {
+// FeedForwardMatrix returns observation control matrix
+func (b *BaseModel) FeedForwardMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	if b.D != nil {
 		m.CloneFrom(b.D)
