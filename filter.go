@@ -21,8 +21,9 @@ type Propagator interface {
 
 // Observer observes external state (output) of the system
 type Observer interface {
-	// Observe observes external state of the system
-	Observe(mat.Vector, mat.Vector, mat.Vector) (mat.Vector, error)
+	// Observe observes external state of the system.
+	// Result for a linear system would be y=C*x+D*u+wn (last term is measurement noise)
+	Observe(x, u, wn mat.Vector) (y mat.Vector, err error)
 }
 
 // Model is a model of a dynamical system

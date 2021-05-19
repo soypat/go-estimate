@@ -18,7 +18,7 @@ type invalidModel struct {
 	c int
 }
 
-func (m *invalidModel) Dims() (n, p, q, r int) {
+func (m *invalidModel) Dims() (nx, nu, ny, nz int) {
 	return m.r, 0, m.c, 0
 }
 

@@ -96,12 +96,12 @@ func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
 // Observe observes external state of falling ball given internal state x and input u.
 // wn is added to the output as a noise vector.
 func (b *BaseModel) Observe(x, u, wn mat.Vector) (mat.Vector, error) {
-	_n, _p, _q, _ := b.Dims()
-	if u != nil && u.Len() != _p {
+	_nx, _nu, _ny, _ := b.Dims()
+	if u != nil && u.Len() != _nu {
 		return nil, fmt.Errorf("invalid input vector")
 	}
 
-	if x.Len() != _n {
+	if x.Len() != _nx {
 		return nil, fmt.Errorf("invalid state vector")
 	}
 
@@ -115,7 +115,7 @@ func (b *BaseModel) Observe(x, u, wn mat.Vector) (mat.Vector, error) {
 		out.Add(out, outU)
 	}
 
-	if wn != nil && wn.Len() == _q {
+	if wn != nil && wn.Len() == _ny {
 		out.Add(out, wn)
 	}
 
