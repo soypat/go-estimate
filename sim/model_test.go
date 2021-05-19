@@ -10,7 +10,7 @@ import (
 
 var (
 	x, u, z, q, r *mat.VecDense
-	A, B, C, D    *mat.Dense
+	A, B, C, D, E *mat.Dense
 )
 
 func setup() {
@@ -26,6 +26,7 @@ func setup() {
 	B = mat.NewDense(2, 1, []float64{0.5, 1.0})
 	C = mat.NewDense(1, 2, []float64{1.0, 0.0})
 	D = mat.NewDense(1, 1, []float64{0.0})
+	E = mat.NewDense(2, 1, []float64{1.0, 0})
 }
 
 func TestMain(m *testing.M) {
@@ -61,7 +62,7 @@ func TestInitCond(t *testing.T) {
 func TestBase(t *testing.T) {
 	assert := assert.New(t)
 
-	f, err := NewBaseModel(A, B, C, D)
+	f, err := NewBaseModel(A, B, C, D, E)
 	assert.NotNil(f)
 	assert.NoError(err)
 }
@@ -69,7 +70,7 @@ func TestBase(t *testing.T) {
 func TestBasePropagate(t *testing.T) {
 	assert := assert.New(t)
 
-	f, err := NewBaseModel(A, B, C, D)
+	f, err := NewBaseModel(A, B, C, D, E)
 	assert.NotNil(f)
 	assert.NoError(err)
 
@@ -95,7 +96,7 @@ func TestBasePropagate(t *testing.T) {
 func TestBaseObserve(t *testing.T) {
 	assert := assert.New(t)
 
-	f, err := NewBaseModel(A, B, C, D)
+	f, err := NewBaseModel(A, B, C, D, E)
 	assert.NotNil(f)
 	assert.NoError(err)
 
@@ -121,7 +122,7 @@ func TestBaseObserve(t *testing.T) {
 func TestBaseSystemMatrices(t *testing.T) {
 	assert := assert.New(t)
 
-	f, err := NewBaseModel(A, B, C, D)
+	f, err := NewBaseModel(A, B, C, D, E)
 	assert.NotNil(f)
 	assert.NoError(err)
 
@@ -141,13 +142,24 @@ func TestBaseSystemMatrices(t *testing.T) {
 func TestBaseDims(t *testing.T) {
 	assert := assert.New(t)
 
-	f, err := NewBaseModel(A, B, C, D)
+	f, err := NewBaseModel(A, B, C, D, E)
 	assert.NotNil(f)
 	assert.NoError(err)
 
-	in, out := f.Dims()
-	_, _in := A.Dims()
-	_out, _ := D.Dims()
-	assert.Equal(_in, in)
-	assert.Equal(_out, out)
+	_n, _p, _q, _r := f.Dims()
+	r, c := A.Dims()
+	assert.Equal(_n, r) // A is square [n,n]
+	assert.Equal(_n, c)
+	r, c = B.Dims()
+	assert.Equal(_n, r) // B [n,p]
+	assert.Equal(_p, c)
+	r, c = C.Dims()
+	assert.Equal(_q, r) // C [q,n]
+	assert.Equal(_n, c)
+	r, c = D.Dims()
+	assert.Equal(_q, r) // D [q,p]
+	assert.Equal(_p, c)
+	r, c = E.Dims()
+	assert.Equal(_n, r) // E [n,r]
+	assert.Equal(_r, c)
 }

@@ -52,22 +52,25 @@ type BaseModel struct {
 	C *mat.Dense
 	// D is output control matrix
 	D *mat.Dense
+	// E is Disturbance matrix
+	E *mat.Dense
 }
 
 // NewBaseModel creates a model of falling ball and returns it
-func NewBaseModel(A, B, C, D *mat.Dense) (*BaseModel, error) {
-	return &BaseModel{A: A, B: B, C: C, D: D}, nil
+func NewBaseModel(A, B, C, D, E *mat.Dense) (*BaseModel, error) {
+	return &BaseModel{A: A, B: B, C: C, D: D, E: E}, nil
 }
 
 // Propagate propagates internal state x of a falling ball to the next step
-func (b *BaseModel) Propagate(x, u, q mat.Vector) (mat.Vector, error) {
-	_in, _out := b.Dims()
-	if u != nil && u.Len() != _out {
-		return nil, fmt.Errorf("Invalid input vector")
+// given an input vector u and a disturbance input z. (wd is process noise, z not implemented yet)
+func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
+	_nx, _nu, _, _nz := b.Dims()
+	if u != nil && u.Len() != _nu {
+		return nil, fmt.Errorf("invalid input vector")
 	}
 
-	if x.Len() != _in {
-		return nil, fmt.Errorf("Invalid state vector")
+	if x.Len() != _nx {
+		return nil, fmt.Errorf("invalid state vector")
 	}
 
 	out := new(mat.Dense)
@@ -80,22 +83,26 @@ func (b *BaseModel) Propagate(x, u, q mat.Vector) (mat.Vector, error) {
 		out.Add(out, outU)
 	}
 
-	if q != nil && q.Len() == _in {
-		out.Add(out, q)
+	if wd != nil && wd.Len() == _nz {
+		// outZ := new(mat.Dense) // TODO add E disturbance matrix
+		// outZ.Mul(b.E, z)
+		// out.Add(out, outZ)
+		out.Add(out, wd)
 	}
 
 	return out.ColView(0), nil
 }
 
-// Observe observes external state of falling ball given internal state x and input u
-func (b *BaseModel) Observe(x, u, r mat.Vector) (mat.Vector, error) {
-	_in, _out := b.Dims()
-	if u != nil && u.Len() != _out {
-		return nil, fmt.Errorf("Invalid input vector")
+// Observe observes external state of falling ball given internal state x and input u.
+// wn is added to the output as a noise vector.
+func (b *BaseModel) Observe(x, u, wn mat.Vector) (mat.Vector, error) {
+	_n, _p, _q, _ := b.Dims()
+	if u != nil && u.Len() != _p {
+		return nil, fmt.Errorf("invalid input vector")
 	}
 
-	if x.Len() != _in {
-		return nil, fmt.Errorf("Invalid state vector")
+	if x.Len() != _n {
+		return nil, fmt.Errorf("invalid state vector")
 	}
 
 	out := new(mat.Dense)
@@ -108,19 +115,26 @@ func (b *BaseModel) Observe(x, u, r mat.Vector) (mat.Vector, error) {
 		out.Add(out, outU)
 	}
 
-	if r != nil && r.Len() == _out {
-		out.Add(out, r)
+	if wn != nil && wn.Len() == _q {
+		out.Add(out, wn)
 	}
 
 	return out.ColView(0), nil
 }
 
-// Dims returns input and output model dimensions
-func (b *BaseModel) Dims() (int, int) {
-	_, in := b.A.Dims()
-	out, _ := b.C.Dims()
-
-	return in, out
+// Dims returns input and output model dimensions.
+// n is state vector length, p is input vector length, q is
+// measured state length (output vector) and r is distrubance input length.
+func (b *BaseModel) Dims() (nx, nu, ny, nz int) {
+	nx, _ = b.A.Dims()
+	if b.B != nil {
+		_, nu = b.B.Dims()
+	}
+	ny, _ = b.C.Dims()
+	if b.E != nil {
+		_, nz = b.E.Dims()
+	}
+	return nx, nu, ny, nz
 }
 
 // StateMatrix returns state propagation matrix
@@ -155,6 +169,5 @@ func (b *BaseModel) OutputCtlMatrix() mat.Matrix {
 	if b.D != nil {
 		m.CloneFrom(b.D)
 	}
-
 	return m
 }

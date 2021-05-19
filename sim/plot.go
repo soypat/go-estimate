@@ -21,7 +21,7 @@ import (
 // * gonum plot fails to be created
 func New2DPlot(model, measure, filter *mat.Dense) (*plot.Plot, error) {
 	if model == nil || measure == nil || filter == nil {
-		return nil, fmt.Errorf("Invalid data supplied")
+		return nil, fmt.Errorf("invalid data supplied")
 	}
 
 	_, cmd := model.Dims()
@@ -29,7 +29,7 @@ func New2DPlot(model, measure, filter *mat.Dense) (*plot.Plot, error) {
 	_, cmf := model.Dims()
 
 	if cmd < 2 || cms < 2 || cmf < 2 {
-		return nil, fmt.Errorf("Invalid data dimensions")
+		return nil, fmt.Errorf("invalid data dimensions")
 	}
 
 	p := plot.New()
@@ -74,7 +74,7 @@ func New2DPlot(model, measure, filter *mat.Dense) (*plot.Plot, error) {
 	filterPoints := makePoints(filter)
 	filterScatter, err := plotter.NewScatter(filterPoints)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create scatter: %v", err)
+		return nil, fmt.Errorf("failed to create scatter: %v", err)
 	}
 	filterScatter.GlyphStyle.Color = color.RGBA{R: 169, G: 169, B: 169}
 	filterScatter.Shape = draw.CrossGlyph{}
