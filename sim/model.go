@@ -44,7 +44,7 @@ func (c *InitCond) Cov() mat.Symmetric {
 
 // Control system defines a linear model of a control system.
 // It contains the System (A), input (B), Observation/Output (C)
-// Feedthrough (D) and distrubance (E) matrices.
+// Feedthrough (D) and disturbance (E) matrices.
 type ControlSystem struct {
 	// A is internal state matrix
 	A *mat.Dense
@@ -90,7 +90,7 @@ func NewContinous(A, B, C, D, E *mat.Dense) (*Continuous, error) {
 	return &Continuous{ControlSystem: ControlSystem{A: A, B: B, C: C, D: D, E: E}}, nil
 }
 
-// ToDiscrete creates a discrete-time model from a continuos time model
+// ToDiscrete creates a discrete-time model from a continuous time model
 // using Ts as the sampling time.
 //
 // It is calculated using Euler's method, an approximation valid for small timesteps.
