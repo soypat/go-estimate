@@ -65,8 +65,6 @@ type Discrete struct {
 
 type Continuous struct {
 	ControlSystem
-	// Dt is the time step advanced on each Propagate() call
-	Dt float64
 }
 
 // NewDiscrete creates a linear discrete-time model based on the control theory equations.
@@ -85,21 +83,18 @@ func NewDiscrete(A, B, C, D, E *mat.Dense) (*Discrete, error) {
 //
 //  dx/dt = A*x + B*u + E*z (disturbances E not implemented yet)
 //  y = C*x + D*u
-func NewContinous(A, B, C, D, E *mat.Dense, dt float64) (*Continuous, error) {
+func NewContinous(A, B, C, D, E *mat.Dense) (*Continuous, error) {
 	if A == nil {
 		return nil, fmt.Errorf("system matrix must be defined for a model")
 	}
-	if dt <= 0 {
-		return nil, fmt.Errorf("time step may not be zero or less than zero")
-	}
-	return &Continuous{ControlSystem: ControlSystem{A: A, B: B, C: C, D: D, E: E}, Dt: dt}, nil
+	return &Continuous{ControlSystem: ControlSystem{A: A, B: B, C: C, D: D, E: E}}, nil
 }
 
 // ToDiscrete creates a discrete-time model from a continuos time model
-// using the Dt field as the sampling time.
+// using Ts as the sampling time.
 //
 // It is calculated using Euler's method, an approximation valid for small timesteps.
-func (c *Continuous) ToDiscrete() (*Discrete, error) {
+func (c *Continuous) ToDiscrete(Ts float64) (*Discrete, error) {
 	var A, B, C, D, E *mat.Dense
 	if c.A == nil {
 		return nil, fmt.Errorf("system matrix must be defined for a model")
@@ -109,11 +104,11 @@ func (c *Continuous) ToDiscrete() (*Discrete, error) {
 
 	if c.B != nil {
 		B = mat.DenseCopyOf(c.B)
-		B.Scale(c.Dt, B)
+		B.Scale(Ts, B)
 	}
 	if c.E != nil {
 		E = mat.DenseCopyOf(c.E)
-		E.Scale(c.Dt, E)
+		E.Scale(Ts, E)
 	}
 
 	if c.C != nil {
@@ -123,7 +118,7 @@ func (c *Continuous) ToDiscrete() (*Discrete, error) {
 		D = mat.DenseCopyOf(c.D)
 	}
 	// x[n+1] = (I + A*dt)x[n] + dt*B*u[n]
-	A.Scale(c.Dt, A)
+	A.Scale(Ts, A)
 	for i := 0; i < nx; i++ {
 		A.Set(i, i, A.At(i, i)+1.)
 	}
@@ -160,8 +155,9 @@ func (ct *Discrete) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
 
 // Propagate propagates returns the next internal state x
 // of a linear, continuous-time system given an input vector u and a
-// disturbance input z. (wd is process noise, z not implemented yet)
-func (ct *Continuous) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
+// disturbance input z. (wd is process noise, z not implemented yet). It propagates
+// the solution by a timestep `dt`.
+func (ct *Continuous) Propagate(x, u, wd mat.Vector, dt float64) (mat.Vector, error) {
 	nx, nu, _, _ := ct.SystemDims()
 	if u != nil && u.Len() != nu {
 		return nil, fmt.Errorf("invalid input vector")
@@ -187,7 +183,7 @@ func (ct *Continuous) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
 		out.Add(out, wd)
 	}
 	// integrate the first order derivatives calculated: dx/dt = A*x + B*u + wd
-	out.Scale(ct.Dt, out)
+	out.Scale(dt, out)
 	out.Add(x, out)
 	return out.ColView(0), nil
 }

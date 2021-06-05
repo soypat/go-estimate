@@ -243,7 +243,7 @@ func (k *KF) Run(x, u, z mat.Vector) (filter.Estimate, error) {
 }
 
 // Model returns KF models
-func (k *KF) Model() filter.Model {
+func (k *KF) Model() filter.DModel {
 	return k.m
 }
 

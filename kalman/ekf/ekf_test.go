@@ -12,7 +12,7 @@ import (
 )
 
 type invalidModel struct {
-	filter.Model
+	filter.DModel
 }
 
 func (m *invalidModel) SystemDims() (nx, nu, ny, nz int) {
