@@ -42,8 +42,10 @@ func (c *InitCond) Cov() mat.Symmetric {
 	return cov
 }
 
-// BaseModel is a basic model of a linear, dynamical system
-type BaseModel struct {
+// Control system defines a linear model of a control system.
+// It contains the System (A), input (B), Observation/Output (C)
+// Feedthrough (D) and distrubance (E) matrices.
+type ControlSystem struct {
 	// A is internal state matrix
 	A *mat.Dense
 	// B is control matrix
@@ -54,27 +56,85 @@ type BaseModel struct {
 	D *mat.Dense
 	// E is Disturbance matrix
 	E *mat.Dense
+}
+
+// Discrete is a basic model of a linear, discrete-time, dynamical system
+type Discrete struct {
+	ControlSystem
+}
+
+type Continuous struct {
+	ControlSystem
 	// Dt is the time step advanced on each Propagate() call
 	Dt float64
 }
 
-// NewBaseModel creates a linear model based on the control theory equations
+// NewDiscrete creates a linear discrete-time model based on the control theory equations.
+//
+//  x[n+1] = A*x[n] + B*u[n] + E*z[n] (disturbances E not implemented yet)
+//  y[n] = C*x[n] + D*u[n]
+func NewDiscrete(A, B, C, D, E *mat.Dense) (*Discrete, error) {
+	if A == nil {
+		return nil, fmt.Errorf("system matrix must be defined for a model")
+	}
+	return &Discrete{ControlSystem: ControlSystem{A: A, B: B, C: C, D: D, E: E}}, nil
+}
+
+// NewContinous creates a linear continuous-time model based on the control theory equations
 // which is advanced by timestep dt.
 //
 //  dx/dt = A*x + B*u + E*z (disturbances E not implemented yet)
 //  y = C*x + D*u
-func NewBaseModel(A, B, C, D, E *mat.Dense, dt float64) (*BaseModel, error) {
+func NewContinous(A, B, C, D, E *mat.Dense, dt float64) (*Continuous, error) {
+	if A == nil {
+		return nil, fmt.Errorf("system matrix must be defined for a model")
+	}
 	if dt <= 0 {
 		return nil, fmt.Errorf("time step may not be zero or less than zero")
 	}
-	return &BaseModel{A: A, B: B, C: C, D: D, E: E, Dt: dt}, nil
+	return &Continuous{ControlSystem: ControlSystem{A: A, B: B, C: C, D: D, E: E}, Dt: dt}, nil
+}
+
+// ToDiscrete creates a discrete-time model from a continuos time model
+// using the Dt field as the sampling time.
+//
+// It is calculated using Euler's method, an approximation valid for small timesteps.
+func (c *Continuous) ToDiscrete() (*Discrete, error) {
+	var A, B, C, D, E *mat.Dense
+	if c.A == nil {
+		return nil, fmt.Errorf("system matrix must be defined for a model")
+	}
+	nx, _, _, _ := c.SystemDims()
+	A = mat.DenseCopyOf(c.A)
+
+	if c.B != nil {
+		B = mat.DenseCopyOf(c.B)
+		B.Scale(c.Dt, B)
+	}
+	if c.E != nil {
+		E = mat.DenseCopyOf(c.E)
+		E.Scale(c.Dt, E)
+	}
+
+	if c.C != nil {
+		C = mat.DenseCopyOf(c.C)
+	}
+	if c.D != nil {
+		D = mat.DenseCopyOf(c.D)
+	}
+	// x[n+1] = (I + A*dt)x[n] + dt*B*u[n]
+	A.Scale(c.Dt, A)
+	for i := 0; i < nx; i++ {
+		A.Set(i, i, A.At(i, i)+1.)
+	}
+	return &Discrete{ControlSystem{A: A, B: B, C: C, D: D, E: E}}, nil
 }
 
 // Propagate propagates returns the next internal state x
-// of a linear system given an input vector u and a
+// of a linear, continuous-time system given an input vector u and a
 // disturbance input z. (wd is process noise, z not implemented yet)
-func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
-	nx, nu, _, _ := b.SystemDims()
+func (ct *Discrete) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
+	nx, nu, _, _ := ct.SystemDims()
 	if u != nil && u.Len() != nu {
 		return nil, fmt.Errorf("invalid input vector")
 	}
@@ -84,10 +144,38 @@ func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
 	}
 
 	out := new(mat.Dense)
-	out.Mul(b.A, x)
-	if u != nil && b.B != nil {
+	out.Mul(ct.A, x)
+	if u != nil && ct.B != nil {
 		outU := new(mat.Dense)
-		outU.Mul(b.B, u)
+		outU.Mul(ct.B, u)
+
+		out.Add(out, outU)
+	}
+
+	if wd != nil && wd.Len() == nx {
+		out.Add(out, wd)
+	}
+	return out.ColView(0), nil
+}
+
+// Propagate propagates returns the next internal state x
+// of a linear, continuous-time system given an input vector u and a
+// disturbance input z. (wd is process noise, z not implemented yet)
+func (ct *Continuous) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
+	nx, nu, _, _ := ct.SystemDims()
+	if u != nil && u.Len() != nu {
+		return nil, fmt.Errorf("invalid input vector")
+	}
+
+	if x.Len() != nx {
+		return nil, fmt.Errorf("invalid state vector")
+	}
+
+	out := new(mat.Dense)
+	out.Mul(ct.A, x)
+	if u != nil && ct.B != nil {
+		outU := new(mat.Dense)
+		outU.Mul(ct.B, u)
 
 		out.Add(out, outU)
 	}
@@ -99,14 +187,14 @@ func (b *BaseModel) Propagate(x, u, wd mat.Vector) (mat.Vector, error) {
 		out.Add(out, wd)
 	}
 	// integrate the first order derivatives calculated: dx/dt = A*x + B*u + wd
-	out.Scale(b.Dt, out)
+	out.Scale(ct.Dt, out)
 	out.Add(x, out)
 	return out.ColView(0), nil
 }
 
 // Observe returns external/observable state given internal state x and input u.
 // wn is added to the output as a noise vector.
-func (b *BaseModel) Observe(x, u, wn mat.Vector) (mat.Vector, error) {
+func (b *ControlSystem) Observe(x, u, wn mat.Vector) (mat.Vector, error) {
 	nx, nu, ny, _ := b.SystemDims()
 	if u != nil && u.Len() != nu {
 		return nil, fmt.Errorf("invalid input vector")
@@ -135,7 +223,7 @@ func (b *BaseModel) Observe(x, u, wn mat.Vector) (mat.Vector, error) {
 
 // SystemDims returns internal state length (nx), input vector length (nu),
 // external/observable/output state length (ny) and disturbance vector length (nz).
-func (b *BaseModel) SystemDims() (nx, nu, ny, nz int) {
+func (b *ControlSystem) SystemDims() (nx, nu, ny, nz int) {
 	nx, _ = b.A.Dims()
 	if b.B != nil {
 		_, nu = b.B.Dims()
@@ -148,7 +236,7 @@ func (b *BaseModel) SystemDims() (nx, nu, ny, nz int) {
 }
 
 // SystemMatrix returns state propagation matrix `A`.
-func (b *BaseModel) SystemMatrix() mat.Matrix {
+func (b *ControlSystem) SystemMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	m.CloneFrom(b.A)
 
@@ -156,7 +244,7 @@ func (b *BaseModel) SystemMatrix() mat.Matrix {
 }
 
 // ControlMatrix returns state propagation control matrix `B`.
-func (b *BaseModel) ControlMatrix() mat.Matrix {
+func (b *ControlSystem) ControlMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	if b.B != nil {
 		m.CloneFrom(b.B)
@@ -166,7 +254,7 @@ func (b *BaseModel) ControlMatrix() mat.Matrix {
 }
 
 // OutputMatrix returns observation matrix `C`.
-func (b *BaseModel) OutputMatrix() mat.Matrix {
+func (b *ControlSystem) OutputMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	m.CloneFrom(b.C)
 
@@ -174,7 +262,7 @@ func (b *BaseModel) OutputMatrix() mat.Matrix {
 }
 
 // FeedForwardMatrix returns observation control matrix `D`.
-func (b *BaseModel) FeedForwardMatrix() mat.Matrix {
+func (b *ControlSystem) FeedForwardMatrix() mat.Matrix {
 	m := &mat.Dense{}
 	if b.D != nil {
 		m.CloneFrom(b.D)
