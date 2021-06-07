@@ -7,6 +7,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+// Continuous is a basic model of a linear, continuous-time, dynamical system
 type Continuous struct {
 	System
 }

@@ -57,7 +57,7 @@ func setup() {
 		ux = append(ux, u)
 	}
 
-	okModel = &sim.Discrete{System: sim.ControlSystem{A: A, B: B, C: C, D: D}}
+	okModel = &sim.Discrete{System: sim.System{A: A, B: B, C: C, D: D}}
 	badModel = &invalidModel{DiscreteControlSystem: okModel, r: 10, c: 10}
 }
 

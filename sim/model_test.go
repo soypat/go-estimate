@@ -121,7 +121,7 @@ func TestDiscreteObserve(t *testing.T) {
 
 func TestSystemMatrices(t *testing.T) {
 	assert := assert.New(t)
-	f := ControlSystem{A, B, C, D, E}
+	f := System{A, B, C, D, E}
 	assert.NotNil(f)
 
 	m := f.SystemMatrix()
@@ -139,7 +139,7 @@ func TestSystemMatrices(t *testing.T) {
 
 func TestSystemDims(t *testing.T) {
 	assert := assert.New(t)
-	f := ControlSystem{A, B, C, D, E}
+	f := System{A, B, C, D, E}
 	assert.NotNil(f)
 
 	nx, nu, ny, nz := f.SystemDims()

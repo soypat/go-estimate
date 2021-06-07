@@ -6,8 +6,6 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-type ControlSystem = System
-
 // System defines a linear model of a plant using
 // traditional matrices of modern control theory.
 //
