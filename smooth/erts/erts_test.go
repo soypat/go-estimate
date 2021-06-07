@@ -13,7 +13,7 @@ import (
 )
 
 type invalidModel struct {
-	filter.DiscreteModel
+	filter.DiscreteControlSystem
 	r int
 	c int
 }
@@ -57,8 +57,8 @@ func setup() {
 		ux = append(ux, u)
 	}
 
-	okModel = &sim.Discrete{ControlSystem: sim.ControlSystem{A: A, B: B, C: C, D: D}}
-	badModel = &invalidModel{DiscreteModel: okModel, r: 10, c: 10}
+	okModel = &sim.Discrete{System: sim.ControlSystem{A: A, B: B, C: C, D: D}}
+	badModel = &invalidModel{DiscreteControlSystem: okModel, r: 10, c: 10}
 }
 
 func TestMain(m *testing.M) {
