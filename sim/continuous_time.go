@@ -12,12 +12,12 @@ type Continuous struct {
 	System
 }
 
-// NewContinous creates a linear continuous-time model based on the control theory equations
+// NewContinuous creates a linear continuous-time model based on the control theory equations
 // which is advanced by timestep dt.
 //
 //  dx/dt = A*x + B*u + E*z (disturbances E not implemented yet)
 //  y = C*x + D*u
-func NewContinous(A, B, C, D, E *mat.Dense) (*Continuous, error) {
+func NewContinuous(A, B, C, D, E *mat.Dense) (*Continuous, error) {
 	if A == nil {
 		return nil, fmt.Errorf("system matrix must be defined for a model")
 	}
